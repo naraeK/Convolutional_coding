@@ -16,9 +16,9 @@ end
 %% Built-in functions
 trellis = poly2trellis(3,[7 5]);
 
-M = 64;                 % Modulation order
+M = 4;                 % Modulation order
 k = log2(M);            % Bits per symbol
-EbNoVec = (4:10)';       % Eb/No values (dB)
+EbNoVec = (2:10)';       % Eb/No values (dB)
 numSymPerFrame = 128;   % L; n_min % Number of QAM symbols per frame
 
 berEstSoft = zeros(size(EbNoVec)); 
