@@ -1,15 +1,15 @@
 % Viterbi Decoding Algorithms
-clear all; clc;
+clear all; close all; clc;
 % n = 2; K = 3; k=1
 % L-bit message sequence
 %% Transmitter
-L = 4; %256;    % short packet
+L = 10^6;    % short packet
 
 %% AWGN channel
 EbN0_dB = [0:10];
 EN0_dB = EbN0_dB - 10*log10(2); % (1-bit -> 2-bit); E/N0 = 1/2 * Eb/N0
 sigma = 1; % Gaussian noise variance
-   
+errViterbi = [];   
 for i = 1:length(EN0_dB)
     % Transmitter
     [m,c] = ConvolutionalEncoder(L); % message m, codeword c
@@ -23,8 +23,26 @@ for i = 1:length(EN0_dB)
     % receiver - hard decision decoding
     r = real(r)>0;
     
-    m_est = ViterbiDecoder(c); % test
+    m_est = ViterbiDecoder(r); % test
+    
+    % counting the errors
+    errViterbi(i) = size(find([m - m_est]),2);
 end
+
+BER_Viterbi = errViterbi / L;
+
+BER_theoretical = 0.5*erfc(sqrt(10.^(EbN0_dB/10))); % theoretical ber uncoded AWGN
+
+figure
+semilogy(EbN0_dB,BER_theoretical);
+hold on
+semilogy(EbN0_dB,BER_Viterbi);
+axis([0 10 10^-5 0.5])
+grid on
+legend('theory - uncoded', 'simulation - Viterbi (n=2, K=3, k=1)');
+xlabel('Eb/No, dB');
+ylabel('Bit Error Rate');
+title('BER for BCC with Viterbi decoding for BPSK in AWGN');
 %% Convolutional Coding Encoder
 % n = 2; K = 3; k=1
 % L-bit message sequence
