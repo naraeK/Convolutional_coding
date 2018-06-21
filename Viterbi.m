@@ -21,7 +21,7 @@ for i = 1:length(EN0_dB)
     r = s + 10^(-EN0_dB(i)/20)*n; % additive white gaussian noise
 
     % receiver - hard decision decoding
-    r = real(r)>0;
+    r = real(r)<0;
     
     m_est = ViterbiDecoder(r); % test
     
@@ -34,15 +34,17 @@ BER_Viterbi = errViterbi / L;
 BER_theoretical = 0.5*erfc(sqrt(10.^(EbN0_dB/10))); % theoretical ber uncoded AWGN
 
 figure
-semilogy(EbN0_dB,BER_theoretical);
+semilogy(EbN0_dB,BER_theoretical,'LineWidth',1.5);
 hold on
-semilogy(EbN0_dB,BER_Viterbi);
+semilogy(EbN0_dB,BER_Viterbi,'LineWidth',1.5);
 axis([0 10 10^-5 0.5])
 grid on
-legend('theory - uncoded', 'simulation - Viterbi (n=2, K=3, k=1)');
+legend('BER-theoretical,uncoded', 'BER-Viterbi (n=2, K=3, k=1)');
 xlabel('Eb/No, dB');
 ylabel('Bit Error Rate');
-title('BER for BCC with Viterbi decoding for BPSK in AWGN');
+title('BER with Viterbi decoding for BPSK in AWGN');
+
+
 %% Convolutional Coding Encoder
 % n = 2; K = 3; k=1
 % L-bit message sequence
@@ -60,7 +62,7 @@ end
 function m_est = ViterbiDecoder(r)%window_size
     state = [0 0;0 1;1 0;1 1];
     survivorPath = zeros(4,length(r)/2);
-    SM_k = zeros(4,1);  % State Metric
+    SM_k = zeros(4,1);  % State Metric: sum of Hamming distance, BM_k
     
     survivorPath(:,1)=[1;0;1;0];
     r_12 = r(1:4);
@@ -82,7 +84,7 @@ function m_est = ViterbiDecoder(r)%window_size
     for k = 3:length(r)/2
         r_k = r(2*k-1:2*k);
         r_k = [r_k;r_k;r_k;r_k]; % for comparing to 'state'
-        BM_k = sum(r_k ~= state,2); % Hamming Distance: Branch Metric
+        BM_k = sum(r_k ~= state,2); % Branch Metric: Hamming Distance 
 
         SM = SM_k; % SM: k-1 th step
         % state 00
