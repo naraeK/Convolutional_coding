@@ -3,8 +3,8 @@ clear all; close all; clc;
 % n = 2; K = 3; k=1
 % L-bit message sequence
 %% Transmitter
-L = 10^6;    % short packet
-
+L = 10^4;    % short packet
+depth = L + 2;
 %% AWGN channel
 EbN0_dB = [0:10];
 EN0_dB = EbN0_dB - 10*log10(2); % (1-bit -> 2-bit); E/N0 = 1/2 * Eb/N0
@@ -26,7 +26,7 @@ for i = 1:length(EN0_dB)
     m_est = ViterbiDecoder(r); % test
     
     % counting the errors
-    errViterbi(i) = size(find([m - m_est]),2);
+    errViterbi(i) = size(find([m - m_est(1:L)]),2);
 end
 
 BER_Viterbi = errViterbi / L;
@@ -64,7 +64,7 @@ function m_est = ViterbiDecoder(r)%window_size
     survivorPath = zeros(4,length(r)/2);
     SM_k = zeros(4,1);  % State Metric: sum of Hamming distance, BM_k
     
-    survivorPath(:,1)=[1;0;1;0];
+    survivorPath(:,1)=[1;1;1;1];%[1;0;1;0];
     r_12 = r(1:4);
     r_12 = [r_12;r_12;r_12;r_12]; % for comparing to 'state'
     BM_k = sum(r_12 ~= [[0 0;1 1;1 1;0 0], state],2); % branch metric
@@ -100,15 +100,14 @@ function m_est = ViterbiDecoder(r)%window_size
         [SM_k(4), idx] = min([SM(3)+BM_k(2),SM(4)+BM_k(3)]);
         survivorPath(4,k) = idx+2;    
     end
-    
+
     % Traceback
     stateTable = [ 0   0   0   0; 0   0   0   0; 1   1   0   0; 0   0   1   1 ]; %%%%
-    currState = 1;%find(SM_k == min(SM_k));
+    currState = find(SM_k == min(SM_k));
     m_est = zeros(1,length(r)/2);
     for l = length(r)/2:-1:1
         prevState = survivorPath(currState,l); 
         m_est(l) = stateTable(currState,prevState);
         currState = prevState;
     end
-    m_est = m_est(1:length(r)/2 -2);
 end
