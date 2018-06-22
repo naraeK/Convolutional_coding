@@ -62,13 +62,14 @@ function [m,c] = ConvolutionalEncoder(L)
     c = [upper; lower]; 
     c = c(:).';     % codeword
 end
+
 %% Viterbi Decoder
 function m_est = ViterbiDecoder(r)%window_size
     state = [0 0;0 1;1 0;1 1];
     survivorPath = zeros(4,length(r)/2);
     SM_k = zeros(4,1);  % State Metric: sum of Hamming distance, BM_k
     
-    survivorPath(:,1)=[1;1;1;1];%[1;0;1;0];
+    survivorPath(:,1)=[1;0;1;0];
     r_12 = r(1:4);
     r_12 = [r_12;r_12;r_12;r_12]; % for comparing to 'state'
     BM_k = sum(r_12 ~= [[0 0;1 1;1 1;0 0], state],2); % branch metric
@@ -106,7 +107,7 @@ function m_est = ViterbiDecoder(r)%window_size
     end
 
     % Traceback
-    stateTable = [ 0   0   0   0; 0   0   0   0; 1   1   0   0; 0   0   1   1 ]; %%%%
+    stateTable = [ 0   0   0   0; 0   0   0   0; 1   1   0   0; 0   0   1   1 ]; 
     currState = 1;% find(SM_k == min(SM_k));
     m_est = zeros(1,length(r)/2);
     for l = length(r)/2:-1:1
@@ -123,18 +124,19 @@ function m_est = Viterbi_window15(r,L)
     outer = ceil(depth/window);
     state = [0 0;0 1;1 0;1 1];
     entirePath = zeros(4,depth);
-    SM_k = zeros(4,1);  % State Metric: sum of Hamming distance, BM_k
     m_est = zeros(1,depth);
+    SM_k = zeros(4,1);  % State Metric: sum of Hamming distance, BM_k
     
     for out = 1:outer
-        
+        ss = find(SM_k == min(SM_k));
+        ss = ss(1);
         SM_k = zeros(4,1);  % State Metric: sum of Hamming distance, BM_k
         
         if (out==1)||(depth <= 15)
             window = min(depth, window);
             survivorPath = [];
-
-            [survivorPath, SM_k, BM_k] = initial_two_steps(r,survivorPath, SM_k, state);
+            ss = 1;
+            [survivorPath, SM_k, BM_k] = initial_two_steps(ss,r,survivorPath, SM_k, state);
             entirePath(:,1:2) = survivorPath;
             [survivorPath, SM_k, BM_k] = further_steps(3, window, r, survivorPath, SM_k, state);
             entirePath(:,3:window) = survivorPath;
@@ -143,17 +145,22 @@ function m_est = Viterbi_window15(r,L)
  %           m_est(1:window) = part_est;
  
         elseif out == outer
-            survivorPath = zeros(4,depth-window*(out-1));
-            [survivorPath, SM_k, BM_k] = further_steps(window*(out-1)+1, depth, r, survivorPath, SM_k, state);
-            entirePath(:,window*(out-1)+1:depth) = survivorPath;
+            survivorPath = [];%zeros(4,depth-window*(out-1));
+            [survivorPath, SM_k, BM_k] = initial_two_steps(ss,r,survivorPath, SM_k, state);
+            
+            entirePath(:,window*(out-1)+1:window*(out-1)+2) = survivorPath;
+            [survivorPath, SM_k, BM_k] = further_steps(window*(out-1)+3, depth, r, survivorPath, SM_k, state);
+            entirePath(:,window*(out-1)+3:depth) = survivorPath;
  %           ls = 1;
  %           part_est = traceback(ls, SM_k, survivorPath);
  %           m_est(window*(out-1)+1:depth) = part_est;
             
         else 
-            survivorPath = zeros(4,window);
-            [survivorPath, SM_k, BM_k] = further_steps(window*(out-1)+1, window*out, r, survivorPath, SM_k, state);
-            entirePath(:,window*(out-1)+1:window*out) = survivorPath;
+            survivorPath = [];%zeros(4,window);
+            [survivorPath, SM_k, BM_k] = initial_two_steps(ss,r,survivorPath, SM_k, state);
+            entirePath(:,window*(out-1)+1:window*(out-1)+2) = survivorPath;
+            [survivorPath, SM_k, BM_k] = further_steps(window*(out-1)+3, window*out, r, survivorPath, SM_k, state);
+            entirePath(:,window*(out-1)+3:window*out) = survivorPath;
  %           ls = find(SM_k == min(SM_k));
  %           part_est = traceback(ls, SM_k, survivorPath);
  %           m_est(window*(out-1)+1:window*out) = part_est;
@@ -164,24 +171,43 @@ function m_est = Viterbi_window15(r,L)
 end
 
 %
-function [survivorPath, SM_k, BM_k] = initial_two_steps(r,survivorPath, SM_k, state)
-    survivorPath(:,1)=[1;0;1;0];
-    r_12 = r(1:4);
-    r_12 = [r_12;r_12;r_12;r_12]; % for comparing to 'state'
-    BM_k = sum(r_12 ~= [[0 0;1 1;1 1;0 0], state],2); % branch metric
+function [survivorPath, SM_k, BM_k] = initial_two_steps(ss,r,survivorPath, SM_k, state)
+    if (ss == 1)||(ss == 2)
+        survivorPath(:,1)=[ss;0;ss;0];
+        r_12 = r(1:4);
+        r_12 = [r_12;r_12;r_12;r_12]; % for comparing to 'state'
+        BM_k = sum(r_12 ~= [[0 0;1 1;1 1;0 0], state],2); % branch metric
+        % state 00
+        SM_k(1) = BM_k(1);
+        survivorPath(1,2) = 1;
+        % state 01
+        SM_k(2) = BM_k(3);
+        survivorPath(2,2) = 3;
+        % state 10
+        SM_k(3) = BM_k(4);
+        survivorPath(3,2) = 1;
+        % state 11
+        SM_k(4) = BM_k(2);
+        survivorPath(4,2) = 3;
 
-    % state 00
-    SM_k(1) = BM_k(1);
-    survivorPath(1,2) = 1;
-    % state 01
-    SM_k(2) = BM_k(3);
-    survivorPath(2,2) = 3;
-    % state 10
-    SM_k(3) = BM_k(4);
-    survivorPath(3,2) = 1;
-    % state 11
-    SM_k(4) = BM_k(2);
-    survivorPath(4,2) = 3;
+    elseif (ss == 3)||(ss == 4)
+        survivorPath(:,1)=[0;ss;0;ss];
+        r_12 = r(1:4);
+        r_12 = [r_12;r_12;r_12;r_12]; % for comparing to 'state'
+        BM_k = sum(r_12 ~= [[1 0;0 1;0 1;1 0], state],2); % branch metric
+        % state 00
+        SM_k(1) = BM_k(4);
+        survivorPath(1,2) = 2;
+        % state 01
+        SM_k(2) = BM_k(2);
+        survivorPath(2,2) = 4;
+        % state 10
+        SM_k(3) = BM_k(1);
+        survivorPath(3,2) = 2;
+        % state 11
+        SM_k(4) = BM_k(3);
+        survivorPath(4,2) = 4;
+    end
 end
 
 %
