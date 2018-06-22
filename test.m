@@ -3,7 +3,7 @@ clear all; close all; clc;
 % n = 2; K = 3; k=1
 % L-bit message sequence
 %% Transmitter
-L = 10^4;    % short packet
+L = 10^6;    % short packet
 depth = L + 2;
 %% AWGN channel
 EbN0_dB = [0:10];
@@ -62,20 +62,47 @@ end
 function m_est = Viterbi_window15(r,L)
     window = 15;
     depth = L + 2; % n * (L + M -1) / 2
-    outer = floor(depth/window);
+    outer = ceil(depth/window);
     state = [0 0;0 1;1 0;1 1];
     entirePath = zeros(4,depth);
     SM_k = zeros(4,1);  % State Metric: sum of Hamming distance, BM_k
     m_est = zeros(1,depth);
     
+    for out = 1:outer
+        
+        SM_k = zeros(4,1);  % State Metric: sum of Hamming distance, BM_k
+        
+        if (out==1)||(depth <= 15)
+            window = min(depth, window);
+            survivorPath = [];
 
-    survivorPath = zeros(4,depth);
-    [survivorPath, SM_k, BM_k] = initial_two_steps(r,survivorPath, SM_k, state);
-
-    [survivorPath, SM_k, BM_k] = further_steps(3, length(r)/2, r, survivorPath, SM_k, state);
+            [survivorPath, SM_k, BM_k] = initial_two_steps(r,survivorPath, SM_k, state);
+            entirePath(:,1:2) = survivorPath;
+            [survivorPath, SM_k, BM_k] = further_steps(3, window, r, survivorPath, SM_k, state);
+            entirePath(:,3:window) = survivorPath;
+ %           ls = find(SM_k == min(SM_k));
+ %           part_est = traceback(ls, SM_k, survivorPath);
+ %           m_est(1:window) = part_est;
+ 
+        elseif out == outer
+            survivorPath = zeros(4,depth-window*(out-1));
+            [survivorPath, SM_k, BM_k] = further_steps(window*(out-1)+1, depth, r, survivorPath, SM_k, state);
+            entirePath(:,window*(out-1)+1:depth) = survivorPath;
+ %           ls = 1;
+ %           part_est = traceback(ls, SM_k, survivorPath);
+ %           m_est(window*(out-1)+1:depth) = part_est;
+            
+        else 
+            survivorPath = zeros(4,window);
+            [survivorPath, SM_k, BM_k] = further_steps(window*(out-1)+1, window*out, r, survivorPath, SM_k, state);
+            entirePath(:,window*(out-1)+1:window*out) = survivorPath;
+ %           ls = find(SM_k == min(SM_k));
+ %           part_est = traceback(ls, SM_k, survivorPath);
+ %           m_est(window*(out-1)+1:window*out) = part_est;
+        end
+    end
     ls = 1;
-    part_est = traceback(ls, SM_k, survivorPath);
-    m_est = part_est;
+    m_est = traceback(ls, SM_k, entirePath);
 end
 
 %
@@ -109,16 +136,16 @@ function [survivorPath, SM_k, BM_k] = further_steps(lef, rig, r, survivorPath, S
         SM = SM_k; % SM: k-1 th step
         % state 00
         [SM_k(1), idx] = min([SM(1)+BM_k(1),SM(2)+BM_k(4)]);
-        survivorPath(1,k) = idx;
+        survivorPath(1,k-lef+1) = idx;
         % state 01
         [SM_k(2), idx] = min([SM(3)+BM_k(3),SM(4)+BM_k(2)]);
-        survivorPath(2,k) = idx+2;
+        survivorPath(2,k-lef+1) = idx+2;
         % state 10
         [SM_k(3), idx] = min([SM(1)+BM_k(4),SM(2)+BM_k(1)]);
-        survivorPath(3,k) = idx;
+        survivorPath(3,k-lef+1) = idx;
         % state 11
         [SM_k(4), idx] = min([SM(3)+BM_k(2),SM(4)+BM_k(3)]);
-        survivorPath(4,k) = idx+2;    
+        survivorPath(4,k-lef+1) = idx+2;    
     end
 end
 
