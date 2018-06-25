@@ -3,7 +3,7 @@ clear all; close all; clc;
 % n = 2; K = 3; k=1
 % L-bit message sequence
 %% Transmitter
-L = 10^6;    % short packet
+L = 10^5;    % short packet
 depth = L + 2;
 %% AWGN channel
 EbN0_dB = [0:10];
@@ -31,6 +31,7 @@ for i = 1:length(EN0_dB)
     errViterbi_w(i) = size(find([m - m_est2(1:L)]),2);
 end
 
+%% BER graphs
 BER_Viterbi = errViterbi / L;
 BER_Viterbi_window = errViterbi_w / L;
 
