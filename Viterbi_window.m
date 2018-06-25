@@ -5,6 +5,27 @@ clear all; close all; clc;
 %% Transmitter
 L = 10^5;    % short packet
 depth = L + 2;
+
+%% Binary Symmetric Channel (BSC) channel
+% EbN0_dB = [0:10];
+% EN0_dB = EbN0_dB - 10*log10(2); % (1-bit -> 2-bit); E/N0 = 1/2 * Eb/N0
+% errViterbi = [];   
+% for i = 1:length(EN0_dB)
+%     % Transmitter
+%     [m,c] = ConvolutionalEncoder(L); % message m, codeword c
+%     
+%     % Binary Symmetric Channel - bsc
+%     p = 10^-2; % Error Probability in BSC: 0<=p<=1
+%     r = bsc(c,p); 
+%     
+%     m_est1 = ViterbiDecoder(r);
+%     m_est2 = Viterbi_window15(r,L); % test
+%     
+%     % counting the errors
+%     errViterbi(i) = size(find([m - m_est1(1:L)]),2);
+%     errViterbi_w(i) = size(find([m - m_est2(1:L)]),2);
+% end
+
 %% AWGN channel
 EbN0_dB = [0:10];
 EN0_dB = EbN0_dB - 10*log10(2); % (1-bit -> 2-bit); E/N0 = 1/2 * Eb/N0
