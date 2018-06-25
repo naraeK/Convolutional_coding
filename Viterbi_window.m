@@ -44,7 +44,7 @@ hold on
 semilogy(EbN0_dB,BER_Viterbi_window,'LineWidth',1.5);
 axis([0 10 10^-5 0.5])
 grid on
-legend('BER-theoretical,uncoded', 'BER-Viterbi (n=2, K=3, k=1)','BER-Viterbi with window (l=15)');
+legend('BER-theoretical,uncoded', 'BER-Viterbi (n=2, K=3, k=1)','BER-Viterbi with window (l=45)');
 xlabel('Eb/No, dB');
 ylabel('Bit Error Rate');
 title('BER with Viterbi decoding for BPSK in AWGN');
@@ -64,7 +64,7 @@ function [m,c] = ConvolutionalEncoder(L)
 end
 
 %% Viterbi Decoder
-function m_est = ViterbiDecoder(r)%window_size
+function m_est = ViterbiDecoder(r)
     state = [0 0;0 1;1 0;1 1];
     survivorPath = zeros(4,length(r)/2);
     SM_k = zeros(4,1);  % State Metric: sum of Hamming distance, BM_k
@@ -119,7 +119,7 @@ end
 
 %% Viterbi Decoder by windowing size of 15
 function m_est = Viterbi_window15(r,L)
-    window = 15;
+    window = 45; % size of the window
     depth = L + 2; % n * (L + M -1) / 2
     outer = ceil(depth/window);
     state = [0 0;0 1;1 0;1 1];
