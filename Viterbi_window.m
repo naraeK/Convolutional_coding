@@ -2,9 +2,8 @@
 clear all; close all; clc;
 % n = 2; K = 3; k=1
 % L-bit message sequence
-%% Transmitter
-L = 10^5;    % short packet
-depth = L + 2;
+%% The size of the sample or the packet length
+L = 10^5;    % valuable for short packet
 
 %% Binary Symmetric Channel (BSC) channel
 % EbN0_dB = [0:10];
