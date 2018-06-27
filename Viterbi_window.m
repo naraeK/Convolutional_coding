@@ -3,7 +3,7 @@ clear all; close all; clc;
 % n = 2; K = 3; k=1
 % L-bit message sequence
 %% The size of the sample or the packet length
-L = 10^5;    % valuable for short packet
+L = 10^4-2;    % valuable for short packet
 
 %% Binary Symmetric Channel (BSC) channel
 % EbN0_dB = [0:10];
@@ -65,7 +65,7 @@ hold on
 semilogy(EbN0_dB,BER_Viterbi_window,'-*','LineWidth',1.5);
 axis([0 10 10^-5 0.5])
 grid on
-legend('BER-theoretical,uncoded', 'BER-Viterbi (n=2, K=3, k=1)','BER-Viterbi with window (l=15)');
+legend('BER-theoretical,uncoded', 'BER-Viterbi (n=2, K=3, k=1)','BER-Viterbi with window (l=8)');
 xlabel('Eb/No, dB');
 ylabel('Bit Error Rate');
 title('BER with Viterbi decoding for BPSK in AWGN');
@@ -140,7 +140,7 @@ end
 
 %% Viterbi Decoder by windowing size of 15
 function m_est = Viterbi_window15(r,L)
-    window = 15;    % size of the window
+    window = 8;    % size of the window
     depth = L + 2;  % n * (L + M -1) / 2
     outer = ceil(depth/window);     % # of windows
     state = [0 0;0 1;1 0;1 1];
@@ -164,20 +164,20 @@ function m_est = Viterbi_window15(r,L)
         
         SM_k = zeros(4,1);  % Reset in every window
         
-        if (out==1)||(depth <= 15)      % first window or short block
+        if (out==1)||(depth <= window)      % first window or short block
             window = min(depth/2, window);
             survivorPath = [];
             ss = 1;
             [survivorPath, SM_k, BM_k] = initial_two_steps(ss,1,r,survivorPath, SM_k, state);
-            entirePath(:,1:2) = survivorPath;
+             entirePath(:,1:2) = survivorPath;
             [survivorPath, SM_k, BM_k] = further_steps(3, 2*window, r, survivorPath, SM_k, state);
             entirePath(:,3:window) = survivorPath(:,1:window-2);
  
         elseif out == outer     % final window
             survivorPath = [];
-            [survivorPath, SM_k, BM_k] = initial_two_steps(ss,2*window*(out-1)+1,r,survivorPath, SM_k, state);
-            
+            [survivorPath, SM_k, BM_k] = initial_two_steps(ss,2*window*(out-1)+1,r,survivorPath, SM_k, state);            
             entirePath(:,window*(out-1)+1:window*(out-1)+2) = survivorPath;
+            
             [survivorPath, SM_k, BM_k] = further_steps(window*(out-1)+3, depth, r, survivorPath, SM_k, state);
             entirePath(:,window*(out-1)+3:depth) = survivorPath;
             
@@ -262,7 +262,9 @@ end
 % Tracking the most-likely message from the survivor path
 function part_est = traceback(ls, SM_k, survivorPath)
     stateTable = [ 0   0   0   0; 0   0   0   0; 1   1   0   0; 0   0   1   1 ]; 
-    currState = ls; %find(SM_k == min(SM_k));
+%     currState = ls; %find(SM_k == min(SM_k));
+    currState = find(SM_k == min(SM_k));
+    currState = currState(1);
     [x y] = size(survivorPath);
     part_est = zeros(1,y);
     for l = y:-1:1
