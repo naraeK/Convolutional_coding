@@ -1,4 +1,4 @@
-clear all; close all; clc
+clear all; clc; %close all
 % n = 2; K = 3; k=1
 % L-bit message sequence
 %% Basic Encoder
@@ -16,10 +16,10 @@ end
 %% Built-in functions
 trellis = poly2trellis(3,[7 5]);
 
-M = 4;                 % Modulation order
+M = 4;                 % Modulation order: QPSK
 k = log2(M);            % Bits per symbol
 EbNoVec = (2:10)';       % Eb/No values (dB)
-numSymPerFrame = 128;   % L; n_min % Number of QAM symbols per frame
+delta_RC = 128;   % n_min % Number of QAM symbols per frame
 
 berEstSoft = zeros(size(EbNoVec)); 
 berEstHard = zeros(size(EbNoVec));
@@ -39,7 +39,7 @@ for n = 1:length(EbNoVec)
     
     while  numErrsSoft < 100 && numBits < 1e7
         % Generate binary data and convert to symbols
-        message = randi([0 1],numSymPerFrame*k,1);
+        message = randi([0 1],delta_RC*k,1);
         
         % Convolutionally encode the data
         codeword = convenc(message,trellis);
@@ -68,7 +68,7 @@ for n = 1:length(EbNoVec)
         % Increment the error and bit counters
         numErrsHard = numErrsHard + numErrsInFrameHard;
         numErrsSoft = numErrsSoft + numErrsInFrameSoft;
-        numBits = numBits + numSymPerFrame*k;
+        numBits = numBits + delta_RC*k;
 
     end
     
@@ -84,3 +84,4 @@ legend('Soft','Hard','Uncoded','location','best')
 grid
 xlabel('Eb/No (dB)')
 ylabel('Bit Error Rate')
+title('QPSK between 2-10 dB')
