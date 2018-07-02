@@ -1,13 +1,13 @@
 % Fading channel
 % Viterbi Decoding Algorithms
-clear all; close all; clc;
+clear all; clc;%close all;
 % n = 2; K = 3; k=1
 % L-bit message sequence
 %% Transmitter
-L = 10^6;    % short packet
+L = 10^7;    % short packet
 
 %% Fading channel/ Rayleigh
-EbN0_dB = [0:2:12];
+EbN0_dB = [0:2:30];
 EN0_dB = EbN0_dB - 10*log10(2); % (1-bit -> 2-bit); E/N0 = 1/2 * Eb/N0
 sigma = 1; % Gaussian noise variance
 errViterbi = [];   
@@ -20,8 +20,7 @@ for i = 1:length(EN0_dB)
     
     % Noise addition
     n = sigma/sqrt(2)*[randn(size(c)) + j*randn(size(c))]; % Gaussian noise, 0 mean and sigma^2 variance 
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  
     % Rayleigh channel fading
     h = sigma/sqrt(2)*[randn(1,length(c)) + j*randn(1,length(c))];  % Assume - constant during the transmission
     
@@ -31,41 +30,48 @@ for i = 1:length(EN0_dB)
 
     % Equalization to remove fading effects. Ideal Equalization Considered
     r_fading = r_fading./h;
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     % BPSK demodulator at the Receiver
     r_fading = real(r_fading) < 0;
-    r_hard = real(r)<0;
+%     r_hard = real(r)<0;
     
     % Decoding
-    m_est1 = ViterbiDecoder(r_hard); 
+%     m_est1 = ViterbiDecoder(r_hard); 
     m_est2 = ViterbiDecoder(r_fading);
     
     % counting the errors
-    errViterbi(i) = size(find([m - m_est1(1:L)]),2);
+%     errViterbi(i) = size(find([m - m_est1(1:L)]),2);
     errViterbi_fading(i) = size(find([m - m_est2(1:L)]),2);
 end
 
 %% BER graphs
-BER_Viterbi = errViterbi / L;
+% BER_Viterbi = errViterbi / L;
 BER_Viterbi_fading = errViterbi_fading / L;
 
-BER_theoretical = 0.5*erfc(sqrt(10.^(EbN0_dB/10))); % theoretical ber uncoded AWGN
+SNR = 10.^(EbN0_dB/10);
+% Theoretical BER in AWGN
+BER_theoretical = 0.5*erfc(sqrt(SNR)); % theoretical ber uncoded AWGN
+
+% Rayleigh Tehoretical BER
+BER_theor_fading = 0.5.*(1-sqrt(SNR./(SNR+1)));
 
 figure
 semilogy(EbN0_dB,BER_theoretical,'LineWidth',1.5);
 hold on
-semilogy(EbN0_dB,BER_Viterbi,'LineWidth',1.5);
+semilogy(EbN0_dB,BER_theor_fading,'LineWidth',1.5);
+% hold on
+% semilogy(EbN0_dB,BER_Viterbi,'LineWidth',1.5);
 hold on
 semilogy(EbN0_dB,BER_Viterbi_fading,'LineWidth',1.5);
-axis([0 12 10^-7 0.5])
+axis([0 30 10^-6 0.5])
 grid on
-legend('BER-theoretical,uncoded', 'BER-Viterbi (n=2, K=3, k=1)','BER-Viterbi, fading');
+legend('BER-theoretical,uncoded,AWGN','BER-theoretical, fading','BER-Viterbi, fading');
+% legend('BER-theoretical,uncoded', 'BER-Viterbi (n=2, K=3, k=1)','BER-Viterbi, fading');
 xlabel('Eb/No, dB');
 ylabel('Bit Error Rate');
-title('BER with Viterbi decoding for BPSK in AWGN');
+title('BER for BPSK in AWGN and Rayleigh Channel');
 
-
+toc;
 %% Convolutional Coding Encoder
 % n = 2; K = 3; k=1
 % L-bit message sequence
