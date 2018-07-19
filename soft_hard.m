@@ -6,6 +6,8 @@ clear all; close all; clc;
 % L-bit message sequence
 %% Transmitter
 L = 10^5;    % short packet
+
+% Rayleigh channel fading
 h = 1/sqrt(2)*[randn(1) + j*randn(1)];
 tic;
 %% AWGN channel & Rayleigh fading channel
@@ -24,13 +26,13 @@ for i = 1:length(EN0_dB)
     r = s + 10^(-EN0_dB(i)/20)*n; % additive white gaussian noise
  
     % Rayleigh channel fading
-   % h = sigma/sqrt(2)*[randn(1) + j*randn(1)];%[randn(1,length(c)) + j*randn(1,length(c))];  % Assume - constant during the transmission
+%     h = sigma/sqrt(2)*[randn(1,length(c)) + j*randn(1,length(c))];  % Assume - constant during the transmission
     
     % Send over Gaussian Link to the receiver
     r_fading = h.*s + 10^(-EN0_dB(i)/20)*n; % additive white gaussian noise
 
     % Equalization to remove fading effects. Ideal Equalization Considered
-    r_fading = real(r_fading)./real(h);
+    r_fading = real(r_fading)./real(h);%real(r_fading)./real(h);
     
     
     % BPSK demodulator at the Receiver
@@ -38,10 +40,10 @@ for i = 1:length(EN0_dB)
     r_hard = real(r)<0;
     
     % Decoding
-    m_est1 = ViterbiDecoder(r_hard); 
-    m_est2 = ViterbiDecoder(r_fading_hard);
-    m_est3 = Viterbi_soft(r);
-    m_est4 = Viterbi_soft(r_fading);
+    m_est1 = ViterbiDecoder(r_hard,'hard'); 
+    m_est2 = ViterbiDecoder(r_fading_hard,'hard');
+    m_est3 = ViterbiDecoder(r,'soft');
+    m_est4 = ViterbiDecoder(r_fading,'soft');
     
     % counting the errors
     errViterbi_h(i) = size(find([m - m_est1(1:L)]),2);
@@ -95,72 +97,23 @@ function [m,c] = ConvolutionalEncoder(L)
     c = c(:).';     % codeword
 end
 
-%% Viterbi Decoder - hard decision
-function m_est = ViterbiDecoder(r)
-    state = [0 0;0 1;1 0;1 1];
+%% Viterbi Decoder - hard decision & soft decision (Maximum Likelihood decisions)
+function m_est = ViterbiDecoder(r,mode)
     survivorPath = zeros(4,length(r)/2);
     SM_k = zeros(4,1);  % State Metric: sum of Hamming distance, BM_k
-    
+
     survivorPath(:,1)=[1;1;1;1];%[1;0;1;0];
-    r_12 = r(1:4);
-    r_12 = [r_12;r_12;r_12;r_12]; % for comparing to 'state'
-    BM_k = sum(r_12 ~= [[0 0;1 1;1 1;0 0], state],2); % branch metric
-    % state 00
-    SM_k(1) = BM_k(1);
-    survivorPath(1,2) = 1;
-    % state 01
-    SM_k(2) = BM_k(3);
-    survivorPath(2,2) = 3;
-    % state 10
-    SM_k(3) = BM_k(4);
-    survivorPath(3,2) = 1;
-    % state 11
-    SM_k(4) = BM_k(2);
-    survivorPath(4,2) = 3;
-    
-    for k = 3:length(r)/2
-        r_k = r(2*k-1:2*k);
-        r_k = [r_k;r_k;r_k;r_k]; % for comparing to 'state'
-        BM_k = sum(r_k ~= state,2); % Branch Metric: Hamming Distance 
-
-        SM = SM_k; % SM: k-1 th step
-        % state 00
-        [SM_k(1), idx] = min([SM(1)+BM_k(1),SM(2)+BM_k(4)]);
-        survivorPath(1,k) = idx;
-        % state 01
-        [SM_k(2), idx] = min([SM(3)+BM_k(3),SM(4)+BM_k(2)]);
-        survivorPath(2,k) = idx+2;
-        % state 10
-        [SM_k(3), idx] = min([SM(1)+BM_k(4),SM(2)+BM_k(1)]);
-        survivorPath(3,k) = idx;
-        % state 11
-        [SM_k(4), idx] = min([SM(3)+BM_k(2),SM(4)+BM_k(3)]);
-        survivorPath(4,k) = idx+2;    
-    end
-
-    % Traceback
-    stateTable = [ 0   0   0   0; 0   0   0   0; 1   1   0   0; 0   0   1   1 ]; 
-    currState = 1;% find(SM_k == min(SM_k));
-    m_est = zeros(1,length(r)/2);
-    for l = length(r)/2:-1:1
-        prevState = survivorPath(currState,l); 
-        m_est(l) = stateTable(currState,prevState);
-        currState = prevState;
-    end
-end
-
-%% Viterbi Decoder - soft decision (Maximum Likelihood decisions)
-function m_est = Viterbi_soft(r)
-    state = [1 1;1 -1;-1 1;-1 -1];
-    survivorPath = zeros(4,length(r)/2);
-    SM_k = zeros(4,1);  % State Metric: sum of Hamming distance, BM_k
-    
-    survivorPath(:,1)=[1;0;1;0];
     r_12 = real(r(1:4));
     r_12 = [r_12;r_12;r_12;r_12]; % for comparing to 'state'
 
-    BM_k = (r_12-[[1 1;-1 -1;-1 -1;1 1],state]).^2; % branch metric
-    BM_k = sum(BM_k,2);
+    if mode == 'hard'
+        state = [0 0;0 1;1 0;1 1];
+        BM_k = sum(r_12 ~= [[0 0;1 1;1 1;0 0], state],2); % branch metric
+    elseif mode == 'soft'
+        state = [1 1;1 -1;-1 1;-1 -1];
+        BM_k = (r_12-[[1 1;-1 -1;-1 -1;1 1],state]).^2; % branch metric
+        BM_k = sum(BM_k,2);
+    end
     % state 00
     SM_k(1) = BM_k(1);
     survivorPath(1,2) = 1;
@@ -178,8 +131,11 @@ function m_est = Viterbi_soft(r)
         r_k = real(r(2*k-1:2*k));
         r_k = [r_k;r_k;r_k;r_k]; % for comparing to 'state'
 
+        if mode == 'hard'
+        BM_k = sum(r_k ~= state,2); % Branch Metric: Hamming Distance 
+        elseif mode == 'soft'           
         BM_k = sum((r_k - state).^2,2); % Branch Metric: Hamming Distance 
-
+        end
         SM = SM_k; % SM: k-1 th step
         % state 00
         [SM_k(1), idx] = min([SM(1)+BM_k(1),SM(2)+BM_k(4)]);
@@ -205,3 +161,4 @@ function m_est = Viterbi_soft(r)
         currState = prevState;
     end
 end
+
