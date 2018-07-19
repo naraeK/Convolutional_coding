@@ -1,17 +1,15 @@
 % Fading channel
 % Soft decision with Maximum likelihood (ML) decision
 % Viterbi Decoding Algorithms
-clear all; close all; clc;
+clear all;  clc;
 % n = 2; K = 3; k=1
 % L-bit message sequence
 %% Transmitter
-L = 10^5;    % short packet
+L = 10^6;    % short packet
 
-% Rayleigh channel fading
-h = 1/sqrt(2)*[randn(1) + j*randn(1)];
 tic;
 %% AWGN channel & Rayleigh fading channel
-EbN0_dB = [0:1:12];
+EbN0_dB = [0:1:15];
 EN0_dB = EbN0_dB - 10*log10(2); % (1-bit -> 2-bit); E/N0 = 1/2 * Eb/N0
 sigma = 1; % Gaussian noise variance
 errViterbi = [];   
@@ -26,14 +24,14 @@ for i = 1:length(EN0_dB)
     r = s + 10^(-EN0_dB(i)/20)*n; % additive white gaussian noise
  
     % Rayleigh channel fading
-%     h = sigma/sqrt(2)*[randn(1,length(c)) + j*randn(1,length(c))];  % Assume - constant during the transmission
-    
+    h = sigma/sqrt(2)*[randn(1,length(c)) + j*randn(1,length(c))];  % Assume - constant during the transmission
+%     h = 1/sqrt(2)*[randn(1) + j*randn(1)];
     % Send over Gaussian Link to the receiver
     r_fading = h.*s + 10^(-EN0_dB(i)/20)*n; % additive white gaussian noise
 
     % Equalization to remove fading effects. Ideal Equalization Considered
-    r_fading = real(r_fading)./real(h);%real(r_fading)./real(h);
-    
+    r_fading = r_fading./h;%real(r_fading)./real(h);
+    r_fading = real(r_fading);
     
     % BPSK demodulator at the Receiver
     r_fading_hard = real(r_fading) < 0;
@@ -76,7 +74,7 @@ hold on
 semilogy(EbN0_dB,BER_Viterbi_h,'LineWidth',1.5);
 hold on
 semilogy(EbN0_dB,BER_Viterbi_s,'LineWidth',1.5);
-axis([0 12 10^-6 0.5])
+axis([0 15 10^-6 0.5])
 grid on
 legend('Theoretical,uncoded,AWGN', 'Theoretical,Rayleigh fading', 'Viterbi(hard),Rayleigh fading', 'Viterbi(soft),Rayleigh fading', 'Viterbi(hard),AWGN', 'Viterbi(soft),AWGN');
 xlabel('Eb/No, dB');
@@ -111,7 +109,7 @@ function m_est = ViterbiDecoder(r,mode)
         BM_k = sum(r_12 ~= [[0 0;1 1;1 1;0 0], state],2); % branch metric
     elseif mode == 'soft'
         state = [1 1;1 -1;-1 1;-1 -1];
-        BM_k = (r_12-[[1 1;-1 -1;-1 -1;1 1],state]).^2; % branch metric
+        BM_k = abs(r_12-[[1 1;-1 -1;-1 -1;1 1],state])%.^2; % branch metric
         BM_k = sum(BM_k,2);
     end
     % state 00
@@ -134,7 +132,7 @@ function m_est = ViterbiDecoder(r,mode)
         if mode == 'hard'
         BM_k = sum(r_k ~= state,2); % Branch Metric: Hamming Distance 
         elseif mode == 'soft'           
-        BM_k = sum((r_k - state).^2,2); % Branch Metric: Hamming Distance 
+        BM_k = sum(abs(r_k - state),2); % Branch Metric: Hamming Distance 
         end
         SM = SM_k; % SM: k-1 th step
         % state 00
